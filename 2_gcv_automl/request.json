@@ -1,0 +1,24 @@
+{
+  "displayName": "TRAININGPIPELINE_DISPLAYNAME",
+  "inputDataConfig": {
+    "datasetId": "DATASET_ID",
+    "fractionSplit": {
+      "trainingFraction": "DECIMAL",
+      "validationFraction": "DECIMAL",
+      "testFraction": "DECIMAL"
+    }
+  },
+  "modelToUpload": {
+    "displayName": "MODEL_DISPLAYNAME",
+    "description": "MODEL_DESCRIPTION",
+    "labels": {
+      "KEY": "VALUE"
+    }
+  },
+  "trainingTaskDefinition": "gs://google-cloud-aiplatform/schema/trainingjob/definition/automl_image_classification_1.0.0.yaml",
+  "trainingTaskInputs": {
+    "multiLabel": "false",
+    "modelType": ["MODELTYPE"],
+    "budgetMilliNodeHours": NODE_HOUR_BUDGET
+  }
+}

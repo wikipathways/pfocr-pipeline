@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Import Data
 # chmod +x step_3.sh
-#Import import_files.csv to bucket via shell or GUI first
+# Upload import_files.csv to bucket via shell or GUI first
+# https://cloud.google.com/vertex-ai/docs/image-data/classification/create-dataset#aiplatform_import_data_image_classification_single_label_sample-drest
 
+# Create dataset and replace Bucket ID
 curl -X POST \
     -H "Authorization: Bearer $(gcloud auth print-access-token)" \
     -H "Content-Type: application/json; charset=utf-8" \
     -d @request_import.json \
-    "https://us-central1-aiplatform.googleapis.com/v1/projects/pfocr-384122/locations/us-central1/datasets/1379990446951890944:import"
+    "https://us-central1-aiplatform.googleapis.com/v1/projects/pfocr-384122/locations/us-central1/datasets/[Bucket ID]:import"

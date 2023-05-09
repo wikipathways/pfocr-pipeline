@@ -2,6 +2,8 @@
 # Import Data
 # chmod +x step_3.sh
 # Upload import_files.csv to bucket via shell or GUI first
+gsutil -m cp -r import_files.csv gs://[Bucket Name]
+
 # https://cloud.google.com/vertex-ai/docs/image-data/classification/create-dataset#aiplatform_import_data_image_classification_single_label_sample-drest
 
 # Create dataset and replace Bucket ID

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# chmod +x step_1.sh
+# chmod +x train_step_1.sh
 
 # First download automl_train_15k_20200224 to your local machine from Dropbox
 

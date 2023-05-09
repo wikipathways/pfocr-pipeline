@@ -1,0 +1,20 @@
+{
+    "displayName": "predict_20230401",
+    "model": "projects/[Project ID]/locations/us-central1/models/[Model ID]",
+    "modelParameters": {
+      "confidenceThreshold": 0.5,
+      "maxPredictions": 10
+    },
+    "inputConfig": {
+        "instancesFormat": "jsonl",
+        "gcsSource": {
+            "uris": ["gs://[Bucket Name]/predict_images.jsonl"],
+        },
+    },
+    "outputConfig": {
+        "predictionsFormat": "jsonl",
+        "gcsDestination": {
+            "outputUriPrefix": "gs://[Bucket Name]",
+        },
+    },
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Import Data
-# chmod +x step_3.sh
+# chmod +x train_step_3.sh
 # Upload import_files.csv to bucket via shell or GUI first
 gsutil -m cp -r import_files.csv gs://[Bucket Name]
 

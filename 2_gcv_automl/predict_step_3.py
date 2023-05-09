@@ -1,3 +1,5 @@
+# This py script convert gs url csv file to jsonl file. Google cloud only accepts jsonl.
+
 import csv
 import json
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Predict images
+
 # chmod +x predict_step_5.sh
 curl -X POST \
     -H "Authorization: Bearer $(gcloud auth print-access-token)" \

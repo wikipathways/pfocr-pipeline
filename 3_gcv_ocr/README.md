@@ -1,6 +1,6 @@
 # Step 3: Optical Character Recognition (OCR)
 
-This protocol uses Google Cloud Vision (GCV) OCR to extract text from the 23,107 images which were predicted as pathway diagrams in the previous step. The images:asyncBatchAnnotate GCV OCR request allows up to 2,000 images per request. Additionally, each request is processed in batches of 100. So, for 23,107 images there are 12 batches which results in 232 json output files. 
+This step uses Google Cloud Vision (GCV) Optical Character Recognition (OCR) to extract text from the 23,107 images which were predicted as pathway diagrams in the previous step. The ```images:asyncBatchAnnotate``` GCV OCR method is used to run asynchronous image detection and annotation for a list of images. A ```images:asyncBatchAnnotate``` request allows up to 2,000 images per request. Additionally, each request is processed in batches of 100. So, for 23,107 images there are 12 batches which results in 232 json output files. 
 
 ### Useful links
 - https://cloud.google.com/functions/docs/tutorials/ocr

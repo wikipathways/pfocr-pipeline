@@ -4,12 +4,9 @@ This protocol uses Google Cloud Vision (GCV) OCR to extract text from the 23,107
 
 ### Useful links
 - https://cloud.google.com/functions/docs/tutorials/ocr
-- https://cloud.google.com/vision/docs/ocr#vision_set_endpoint-python
-- https://cloud.google.com/vision/docs/detect-labels-image-command-line
-- https://cloud.google.com/vision/docs/batch#vision_async_batch_annotate_images-python
-- https://cloud.google.com/vision/product-search/docs/auth
-- https://cloud.google.com/vision/docs/reference/rest/v1/images/asyncBatchAnnotate
 - https://cloud.google.com/vision/docs/ocr#vision_set_endpoint-drest
+- https://cloud.google.com/vision/docs/batch#vision_async_batch_annotate_images-python
+- https://cloud.google.com/vision/docs/reference/rest/v1/images/asyncBatchAnnotate
 
 ### Next Step
 

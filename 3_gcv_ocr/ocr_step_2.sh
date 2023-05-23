@@ -20,5 +20,6 @@ gsutil -m rm -r gs://[Output Bucket Name]
 # replace [Output Folder] with the desired output folder
 python split_json_output.py --input_dir [Input Folder] --output_dir [Output Folder]
 
+# move any csv and json files used for this step to Dropbox
 
 ###### END ###### 

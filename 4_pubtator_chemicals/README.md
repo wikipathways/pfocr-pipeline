@@ -1,3 +1,3 @@
-# Step 4A: PubTator chemicals
+# Step 4B: PubTator chemicals
 
 coming soon...

@@ -1,3 +1,3 @@
-# Step 4A: PubTator diseases
+# Step 4C: PubTator diseases
 
 coming soon...

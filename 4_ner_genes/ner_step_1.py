@@ -1,12 +1,12 @@
-## Named Entity Recognition (classic)
+## Named Entity Recognition 
 # formerly "Post-processing" pp_classic.ipynb
 
 ## LOCAL CONFIGURATIONS
-data_dir = Path('/Users/alexpico/Dropbox (Gladstone)/pfocr-pipeline/20230401/')
-ner_genes_dir = data_dir.joinpath('4_ner_genes/')
-gcv_ocr_dir = data_dir.joinpath('3_gcv_ocr/')
-#ner_genes_dir = Path('.')
-#gcv_ocr_dir = Path('../3_gcv_ocr/')
+# data_dir = Path('/Users/alexpico/Dropbox (Gladstone)/pfocr-pipeline-runs/20230401/')
+# ner_genes_dir = data_dir.joinpath('4_ner_genes/')
+# gcv_ocr_dir = data_dir.joinpath('3_gcv_ocr/')
+ner_genes_dir = Path('.')
+gcv_ocr_dir = Path('../3_gcv_ocr/')
 os.environ['R_HOME'] = '/Library/Frameworks/R.framework/Versions/4.1/Resources/'
 
 ## IMPORTS
@@ -27,6 +27,7 @@ from rpy2.robjects.lib.dplyr import DataFrame
 from rpy2.robjects.packages import importr
 
 #Import from local directory
+#pip install confusable_homoglyphs
 import transforms
 
 #TODO: remove unused imports
@@ -40,7 +41,6 @@ import transforms
 # from nltk.metrics import edit_distance
 
 ## READ/SAVE RDS FILES
-
 pandas2ri.activate()
 base = importr("base")
 readRDS = ro.r["readRDS"]
@@ -59,15 +59,29 @@ def pandas2rds(pandas_df, rds_path):
     saveRDS(r_df, str(rds_path))
 
 ## LOAD LEXICON
-
+# Note: The lexicon file may contain redudant entries for the same gene symbol.
+#       This is because the lexicon is built from multiple sources, including
+#       aliases and bioentities. This is okay. All possible matches are returned.
 with open(ner_genes_dir.joinpath("lexicon2020.json"), "r") as f:
     lexicon2020_df = pd.read_json(f)
-lexicon2020_df
 
+# ncbigene_ids_by_symbol = (
+#     lexicon2020_df[["ncbigene_id", "symbol"]]
+#     .set_index("symbol")
+#     .to_dict["ncbigene_id"]
+# )
 ncbigene_ids_by_symbol = (
-    lexicon2020_df[["ncbigene_id", "symbol"]]
-    .set_index("symbol")
-    .to_dict()["ncbigene_id"]
+    lexicon2020_df.groupby('symbol')['ncbigene_id']
+    .apply(list).to_dict()
+)
+# lexicon_sources_by_symbol = (
+#     lexicon2020_df[["source", "symbol"]]
+#     .set_index("symbol")
+#     .to_dict()["source"]
+# )
+lexicon_sources_by_symbol = (
+    lexicon2020_df.groupby('symbol')['source']
+    .apply(list).to_dict()
 )
 
 symbol_characters = set()
@@ -77,35 +91,21 @@ for symbol in ncbigene_ids_by_symbol.keys():
 print(len(symbol_characters))
 
 ## LOAD FIGURE OCR DATA
-figures2021_new_data = [
-    x
-    for x in figures2021_data
-    if x["new"]
-    and Path(x["ocr_output_path"]).exists()
-    and x["classification"] == "pathway"
-]
-print(len(figures2021_new_data))
-
-
-run_timestamp = datetime.now().strftime("%Y%m%d%H%M")
-
-
-
-results_path = images_dir.joinpath(f"results{run_timestamp}.tsv")
-successes_path = images_dir.joinpath(f"successes{run_timestamp}.txt")
-fails_path = images_dir.joinpath(f"fails{run_timestamp}.txt")
-
-next_pfocr_id_path = images_dir.joinpath("next_pfocr_id_path.txt")
-
-
-with open(next_pfocr_id_path, "w") as f:
-    f.write("")
-
-with open(results_path, "w") as f:
-    f.write(
-        "\t".join(["pfocr_id", "ncbigene_id", "ocr_text", "lexicon_term"])
-        + "\n"
+# store file paths to .json files in gcv_ocr_dir as an array
+gcv_ocr_data = []
+for path in gcv_ocr_dir.glob("*.json"):
+    gcv_ocr_data.append(
+        {
+            "figid": path.stem,
+            "ocr_file_path": path
+        }
     )
+print(len(gcv_ocr_data))
+
+# Prepare file paths to save results
+run_timestamp = datetime.now().strftime("%Y%m%d%H%M")
+successes_path = ner_genes_dir.joinpath(f"qc_successes_{run_timestamp}.txt")
+fails_path = ner_genes_dir.joinpath(f"qc_fails_{run_timestamp}.txt")
 
 with open(successes_path, "w") as f:
     f.write("")
@@ -113,36 +113,33 @@ with open(successes_path, "w") as f:
 with open(fails_path, "w") as f:
     f.write("")
 
-
-def attempt_match(
+# Define function to store lexicon matches
+def store_match(
     matches_data,
     matches,
     transforms_applied,
-    pfocr_id,
+    figid,
     ocr_text,
     symbol_id,
+    lexicon_source,
     transformed_ocr_text,
 ):
     if transformed_ocr_text:
         matches.add(transformed_ocr_text)
-        with open(results_path, "a") as f:
-            f.write(
-                "\t".join(
-                    [pfocr_id, str(symbol_id), ocr_text, transformed_ocr_text]
-                )
-                + "\n"
+        # for each index of symbol_id list corresponding to a match
+        for i in range(len(symbol_id)):
+            matches_data.append(
+                {
+                    "figid": figid,
+                    "ncbigene_id": symbol_id[i],
+                    "matched_ocr_text": ocr_text,
+                    "lexicon_term": transformed_ocr_text,
+                    "lexicon_source": lexicon_source[i],
+                    "transforms_applied": transforms_applied,
+                }
             )
 
-        matches_data.append(
-            {
-                "pfocr_id": pfocr_id,
-                "ncbigene_id": symbol_id,
-                "matched_ocr_text": ocr_text,
-                "lexicon_term": transformed_ocr_text,
-                "transforms_applied": transforms_applied,
-            }
-        )
-
+# Define set and order of transforms to apply to OCR text
 transforms_to_apply = [
     {
         "name": "stop",
@@ -180,10 +177,8 @@ transforms_to_apply = [
     },
 ]
 
-
-def match(matches_data, pfocr_id, symbol_ids_by_symbol, all_raw_ocr_text):
-    with open(next_pfocr_id_path, "a") as f:
-        f.write(pfocr_id)
+# Define function to execute matching attempts on all OCR results
+def match(matches_data, figid, ids_by_symbol, sources_by_symbol, all_raw_ocr_text):
 
     successes = list()
     fails = list()
@@ -210,27 +205,31 @@ def match(matches_data, pfocr_id, symbol_ids_by_symbol, all_raw_ocr_text):
                         # perform match for original and uppercased ocr_texts (see elif)
 
                         try:
-                            if transformed_ocr_text in symbol_ids_by_symbol:
-                                attempt_match(
+                            if transformed_ocr_text in ids_by_symbol:
+                                store_match(
                                     matches_data,
                                     matches,
                                     transforms_applied,
-                                    pfocr_id,
+                                    figid,
                                     ocr_text,
-                                    symbol_ids_by_symbol[transformed_ocr_text],
+                                    ids_by_symbol[transformed_ocr_text],
+                                    sources_by_symbol[transformed_ocr_text],
                                     transformed_ocr_text,
                                 )
                             elif (
                                 transformed_ocr_text.upper()
-                                in symbol_ids_by_symbol
+                                in ids_by_symbol
                             ):
-                                attempt_match(
+                                store_match(
                                     matches_data,
                                     matches,
                                     transforms_applied,
-                                    pfocr_id,
+                                    figid,
                                     ocr_text,
-                                    symbol_ids_by_symbol[
+                                    ids_by_symbol[
+                                        transformed_ocr_text.upper()
+                                    ],
+                                    sources_by_symbol[
                                         transformed_ocr_text.upper()
                                     ],
                                     transformed_ocr_text.upper(),
@@ -245,7 +244,7 @@ def match(matches_data, pfocr_id, symbol_ids_by_symbol, all_raw_ocr_text):
 
                         except (Exception) as e:
                             print("Unexpected Error:", e)
-                            print("pfocr_id:", pfocr_id)
+                            print("figid:", figid)
                             print("ocr_text:", ocr_text)
                             print(
                                 "transformed_ocr_text:",
@@ -258,12 +257,13 @@ def match(matches_data, pfocr_id, symbol_ids_by_symbol, all_raw_ocr_text):
                             raise
 
             if len(matches) == 0:
-                attempt_match(
+                store_match(
                     matches_data,
                     matches,
                     transforms_applied,
-                    pfocr_id,
+                    figid,
                     ocr_text,
+                    None,
                     None,
                     None,
                 )
@@ -272,43 +272,47 @@ def match(matches_data, pfocr_id, symbol_ids_by_symbol, all_raw_ocr_text):
         else:
             fails.append(line)
 
-    with open(successes_path, "w") as f:
+    with open(successes_path, "a") as f:
+        f.write(figid + "\n")
         for success in successes:
             f.write(success + "\n")
         f.write("\n")
 
-    with open(fails_path, "w") as f:
+    with open(fails_path, "a") as f:
+        f.write(figid + "\n")
         for fail in fails:
             f.write(fail + "\n")
         f.write("\n")
 
-    # print(f"{pfocr_id}")
+    #DEBUG print lines
+    # print(f"{figid}")
     # print(f"  successes")
     # print(f"  {successes}")
     # print(f"  fails")
     # print(f"  {fails}")
     # print("")
 
+## RUN NER FOR ALL FIGURES
+gene_matches_data = list()
+for x in gcv_ocr_data:
 
-genes_2021_data = list()
-for x in figures2021_new_data:
-
-    ocr_output_path = Path(x["ocr_output_path"])
-    with ocr_output_path.open("r", encoding="utf8") as f:
+    ocr_file_path = Path(x["ocr_file_path"])
+    with ocr_file_path.open("r", encoding="utf8") as f:
         ocr_output = json.load(f)
     if len(ocr_output) == 0:
-        print(f"empty ocr_output_path: {ocr_output_path}")
+        print(f"empty ocr_file_path: {ocr_file_path}")
         continue
 
     ocr_text = ocr_output[0]["description"]
 
-    pfocr_id = x["pfocr_id"]
+    figid = x["figid"]
 
     try:
-        match(genes_2021_data, pfocr_id, ncbigene_ids_by_symbol, ocr_text)
+        match(gene_matches_data, figid, ncbigene_ids_by_symbol, lexicon_sources_by_symbol, ocr_text)
     except (Exception) as e:
         print("Unexpected Error:", e)
-        print("pfocr_id:", pfocr_id)
+        print("figid:", figid)
+        #DEBUG print lines
         #        print("word:", word)
         #        print(
         #            "transformed_word:",
@@ -320,48 +324,40 @@ for x in figures2021_new_data:
         #        )
         raise
 
-genes_2021_df = pd.DataFrame(genes_2021_data)
-
-genes_2021_df["pfocr_year"] = 2021
-
-genes_2021_exportable_results_df = genes_2021_df.copy(deep=True)
-genes_2021_exportable_results_df["transforms_applied"] = genes_2021_df[
+# Prep dataframe for export
+gene_matches_df = pd.DataFrame(gene_matches_data)
+gene_matches_exportable_results_df = gene_matches_df.copy(deep=True)
+gene_matches_exportable_results_df["transforms_applied"] = gene_matches_df[
     "transforms_applied"
 ].str.join(",")
+
+# Export all results (including duplicate matches per figure)
 pandas2rds(
-    genes_2021_exportable_results_df,
-    images_dir.joinpath(f"results{run_timestamp}.rds"),
-)
-genes_2021_exportable_results_df.to_csv(
-    str(images_dir.joinpath(f"results{run_timestamp}.csv"))
+    gene_matches_exportable_results_df,
+    ner_genes_dir.joinpath(f"qc_results_{run_timestamp}.rds"),
 )
 
-genes_2021_df
-
-
-# I don't currently have all the 2021 data to fill in the same set of columns we used in 2020, so some of them are commented out below.
-
-
-genes_2021_export_columns = [
-    "pfocr_id",
+# Subset, order and rename columns
+gene_matches_export_columns = [
+    "figid",
     "matched_ocr_text",
     "lexicon_term",
-    # "lexicon_term_source",
-    # "hgnc_symbol",
     "ncbigene_id",
-    # "unique_gene_count",
-    "pfocr_year",
+    "lexicon_source",
+]
+gene_matches_df = gene_matches_df[gene_matches_export_columns]
+gene_matches_df.columns = [
+    "figid",
+    "word",
+    "symbol",
+    "entrez",
+    "source"
 ]
 
+# Deduplicate for a more efficient export
+gene_matches_df = gene_matches_df.drop_duplicates()
+
 pandas2rds(
-    genes_2021_df[genes_2021_export_columns],
-    images_dir.joinpath("pfocr_genes_2021.rds"),
+    gene_matches_df,
+    ner_genes_dir.joinpath(f"pfocr_genes_{run_timestamp}.rds"),
 )
-
-
-
-
-
-
-
-

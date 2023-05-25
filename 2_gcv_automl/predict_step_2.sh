@@ -24,4 +24,4 @@ cat predictions_*.jsonl > predictions.jsonl
 rm predictions_*.jsonl
 
 # Then we can delete all data in the bucket:
-gsutil -m rm -r gs://your-bucket-name/*
+gsutil -m rm -r gs://[Bucket Name]/*

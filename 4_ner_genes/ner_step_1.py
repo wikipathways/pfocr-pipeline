@@ -1,15 +1,7 @@
 ## Named Entity Recognition 
 # formerly "Post-processing" pp_classic.ipynb
 
-## LOCAL CONFIGURATIONS
-# data_dir = Path('/Users/alexpico/Dropbox (Gladstone)/pfocr-pipeline-runs/20230401/')
-# ner_genes_dir = data_dir.joinpath('4_ner_genes/')
-# gcv_ocr_dir = data_dir.joinpath('3_gcv_ocr/')
-ner_genes_dir = Path('.')
-gcv_ocr_dir = Path('../3_gcv_ocr/')
-os.environ['R_HOME'] = '/Library/Frameworks/R.framework/Versions/4.1/Resources/'
-
-## IMPORTS
+## BASIC IMPORTS
 import csv
 import io
 import json
@@ -18,6 +10,13 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path, PurePath
+
+## LOCAL CONFIGURATIONS
+ner_genes_dir = Path('.')
+gcv_ocr_dir = Path('../3_gcv_ocr/')
+os.environ['R_HOME'] = '/Library/Frameworks/R.framework/Versions/4.1/Resources/'
+
+## ADDITIONAL IMPORTS
 import pandas as pd
 from functools import partial
 import rpy2.robjects as ro
@@ -29,16 +28,6 @@ from rpy2.robjects.packages import importr
 #Import from local directory
 #pip install confusable_homoglyphs
 import transforms
-
-#TODO: remove unused imports
-# from itertools import zip_longest
-# import hashlib
-# import signal
-# import subprocess
-# import tempfile
-# import warnings
-# from IPython.display import Image
-# from nltk.metrics import edit_distance
 
 ## READ/SAVE RDS FILES
 pandas2ri.activate()

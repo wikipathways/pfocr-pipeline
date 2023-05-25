@@ -21,14 +21,14 @@ json_df <- json_df %>%
 # Merge the JSONL data with the original data frame based on the id column
 df <- merge(df, json_df[c("figid", "automl_pathway")], by = "figid", all.x = TRUE)
 
+# Save the updated data frame as an rds file
+saveRDS(df, "../pfocr_figures_automl.rds")
+
 # Produce count log
 line1 <- sprintf("Number of figures: %d", nrow(df))
 line2 <- sprintf("Number of predicted pathways: %d", sum(df$automl_pathway >= 0.5))
 file_path <- "automl_counts.txt"
 cat(line1, "\n",line2, "\n", file = file_path)
-
-# Save the updated data frame as an rds file
-saveRDS(df, "../pfocr_figures_automl.rds")
 
 # Move "other" images and metadata to subfolders
 subfolder1 <- "../1_images/other"

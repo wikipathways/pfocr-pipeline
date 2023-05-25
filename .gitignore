@@ -1,3 +1,13 @@
+# run-specific file typs
+*.jpg
+*.png
+*.rds
+*.csv
+*.log
+*.json
+*.jsonl
+1_metadata/**.yml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -13,11 +13,11 @@ gsutil mb gs://[Input Bucket Name]
 gsutil mb gs://[Output Bucket Name]
 
 # Upload images to the google cloud storage input bucket, replace [Input Bucket Name] with your Input Bucket Name
-cd 1_images/
+cd ../1_images/
 gsutil -m cp -r "*.jpg" gs://[Input Bucket Name]
 
 # Go the folder where the scripts are
-cd 3_gcv_ocr/ 
+cd ../3_gcv_ocr/ 
 
 # Get images urls in the bucket
 gsutil ls -r gs://[Input Bucket Name]/ > ocr_images.csv

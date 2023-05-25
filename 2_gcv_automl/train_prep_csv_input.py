@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-label = pd.read_csv("automl_train_15k_20200224.csv", header = None)
+label = pd.read_csv("../../automl_train_15k_20200224.csv", header = None)
 
 label.columns = ["file_name", "label"]
 

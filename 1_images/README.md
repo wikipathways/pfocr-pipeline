@@ -1,4 +1,4 @@
-# Step 1. Images and metadata
+# Step 1. Images
 
 The [PFOCR PMC Figure Bot](https://github.com/wikipathways/pfocr-pmcfigurebot) collects images and metadata as paired jgp and yml files monthly. These can be collected into a single Dropbox folder (e.g., under pfocr-pipeline) for future processing.
 

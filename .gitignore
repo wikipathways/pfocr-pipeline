@@ -8,6 +8,10 @@
 *.jsonl
 1_metadata/**.yml
 
+# lexicon files
+*_info
+*_info.gz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

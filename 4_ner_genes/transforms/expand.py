@@ -17,7 +17,14 @@ dash_chunks_re = re.compile("\-")
 dash_from_digit_re = re.compile(".+?\D(\d+)\-\d+") #need non-digit \D check to avoid memory leak cases
 dash_root_re = re.compile("(.+?)\d+\-\d+")
 
-def expand(word):
+def expand(input_list):
+    results = list()
+    for input_str in input_list:
+        res = expand_i(input_str)
+        results.append(res)
+    return [item for sublist in results for item in sublist]
+
+def expand_i(word):
     if not word:
         return []
 

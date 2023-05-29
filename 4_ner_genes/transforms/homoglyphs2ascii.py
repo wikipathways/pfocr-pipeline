@@ -8,8 +8,14 @@ def get_tree_paths(incomplete_tree_paths, homoglyphs):
             updated_tree_paths.append(incomplete_tree_path + homoglyph)
     return updated_tree_paths
 
-
-def homoglyphs2ascii(input_str, acceptable_characters):
+def homoglyphs2ascii(input_list, acceptable_characters):
+    results = list()
+    for input_str in input_list:
+        res = homoglyphs2ascii_i(input_str, acceptable_characters)
+        results.append(res)
+    return [item for sublist in results for item in sublist][1:5]
+    
+def homoglyphs2ascii_i(input_str, acceptable_characters):
     tree_paths = [""]
 
     for c in input_str:

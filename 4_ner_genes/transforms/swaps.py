@@ -39,14 +39,32 @@ swap_list = {
 'PLASMINOGEN':'PLG',
 'PLASMIN':'PLG',
 'EB13':'EBI3',
+'TRADE':'TRADD',
 'NRF-1':'NFE2L1',
 'NRF-2':'NFE2L2'
 }
 
+# This function goes through the swap_list and replaces the keys 
+# found within each word with the corresponding values
 def multipleReplace(text, wordDict):
     for key in wordDict:
         text = text.upper().replace(key, wordDict[key])
     return text
 
-def swaps(word):
-    return [multipleReplace(word, swap_list)]
+def swaps(input_list):
+    results = list()
+    for input_str in input_list:
+        res = swaps_i(input_str)
+        results.append(res)
+    return [item for sublist in results for item in sublist]
+   
+def swaps_i(word):
+    if len(word) > 0:
+        multiRepWord = multipleReplace(word, swap_list)
+        if len(multiRepWord) > 0:
+            return [multiRepWord]
+        else:
+            return []
+    else:
+        return []
+

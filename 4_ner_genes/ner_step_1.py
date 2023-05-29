@@ -18,6 +18,7 @@ os.environ['R_HOME'] = '/Library/Frameworks/R.framework/Versions/4.1/Resources/'
 
 ## ADDITIONAL IMPORTS
 import pandas as pd
+import unicodedata
 from functools import partial
 import rpy2.robjects as ro
 from rpy2.robjects import default_converter, pandas2ri
@@ -54,22 +55,25 @@ def pandas2rds(pandas_df, rds_path):
 with open(ner_genes_dir.joinpath("lexicon2020.json"), "r") as f:
     lexicon2020_df = pd.read_json(f)
 
-# ncbigene_ids_by_symbol = (
-#     lexicon2020_df[["ncbigene_id", "symbol"]]
-#     .set_index("symbol")
-#     .to_dict["ncbigene_id"]
-# )
 ncbigene_ids_by_symbol = (
     lexicon2020_df.groupby('symbol')['ncbigene_id']
     .apply(list).to_dict()
 )
-# lexicon_sources_by_symbol = (
-#     lexicon2020_df[["source", "symbol"]]
-#     .set_index("symbol")
-#     .to_dict()["source"]
-# )
+
 lexicon_sources_by_symbol = (
     lexicon2020_df.groupby('symbol')['source']
+    .apply(list).to_dict()
+)
+# mild transformations of lexicon symbols
+ncbigene_ids_by_transformed_symbol = (
+    lexicon2020_df.assign(symbol=lexicon2020_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
+    .groupby('symbol')['ncbigene_id']
+    .apply(list).to_dict()
+)
+
+lexicon_sources_by_transformed_symbol = (
+    lexicon2020_df.assign(symbol=lexicon2020_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
+    .groupby('symbol')['source']
     .apply(list).to_dict()
 )
 
@@ -93,8 +97,8 @@ print(len(gcv_ocr_data))
 
 # Prepare file paths to save results
 run_timestamp = datetime.now().strftime("%Y%m%d%H%M")
-successes_path = ner_genes_dir.joinpath(f"qc_successes_{run_timestamp}.txt")
-fails_path = ner_genes_dir.joinpath(f"qc_fails_{run_timestamp}.txt")
+successes_path = ner_genes_dir.joinpath(f"qc_successes_{run_timestamp}.log")
+fails_path = ner_genes_dir.joinpath(f"qc_fails_{run_timestamp}.log")
 
 with open(successes_path, "w") as f:
     f.write("")
@@ -131,18 +135,10 @@ def store_match(
 # Define set and order of transforms to apply to OCR text
 transforms_to_apply = [
     {
-        "name": "stop",
-        "transform": transforms.stop.stop,
-    },
-    {
         "name": "homoglyphs2ascii",
         "transform": lambda ocr_text: transforms.homoglyphs2ascii.homoglyphs2ascii(
             ocr_text, symbol_characters
         ),
-    },
-    {
-        "name": "nfkc",
-        "transform": transforms.nfkc.nfkc,
     },
     {
         "name": "deburr",
@@ -166,36 +162,72 @@ transforms_to_apply = [
     },
 ]
 
+# ocr_text patterns to skip
+skip_patterns = [
+    r'^.$', # singular characters
+    r'^[+-]?\d+$', # integer numbers
+    r'^[+-]?\d+[.,]\d+$', # float numbers
+    r'^[+-]?\d+(?:\.\d*)?[eE][+-]?\d+$', # scientific notation numbers
+    r'^[+-]?\d+(?:\.\d*)?x[+-]?\d+$', # numbers with x notation
+    r'^\w{13,}$', # words with 13 or more alphanumeric characters
+]
+skip_patterns_combo = re.compile('|'.join(skip_patterns))
+
+# Matches to ignore due to high false positive rate
+# NOTE: all single letter symbols have already been removed from the lexicon
+# NOTE: all double letter symbols have already been removed from prev_symbol, alias_symbol; 
+#       some remain from current HGNC symbols and bioentities sources, e.g., GK, GA and HR.
+# NOTE: entries should be upper and alphanumeric-only
+stop_list = ["CO2","HR","GA","CA2","TYPE",
+    "DAMAGE","GK","S21","TAT","L10","CYCLIN",
+	"CAMP","FOR","DAG","PIP","FATE","ANG",
+	"NOT","CAN","MIR","CEL","CELL","ECM","HITS","AID","HDS",
+	"REG","ROS","D1","CALL","BEND3","NFE","END","I1","MUT",
+    "MICE","IMPACT","FAT","ODD","SEX","STEP","TUBE"]
+
+
 # Define function to execute matching attempts on all OCR results
-def match(matches_data, figid, ids_by_symbol, sources_by_symbol, all_raw_ocr_text):
+def match(matches_data, figid, ids_by_symbol, sources_by_symbol, ids_by_transformed_symbol, sources_by_transformed_symbol, all_raw_ocr_text):
 
     successes = list()
     fails = list()
 
     for line in all_raw_ocr_text.split("\n"):
-        matches = set()
-
         ocr_texts = set()
-        ocr_texts.add(line.replace(" ", ""))
-
+        # Add words with no spaces
+        # ocr_texts.add(line.replace(" ", ""))
+        # Also add words split by those same spaces
         for w in line.split(" "):
             ocr_texts.add(w)
 
         for ocr_text in ocr_texts:
+            # see http://www.unicode.org/reports/tr15/#Canon_Compat_Equivalence
+            ocr_text = unicodedata.normalize("NFKC", ocr_text)
+            if skip_patterns_combo.match(ocr_text):
+                break
             transforms_applied = []
             transformed_ocr_texts = [ocr_text]
+            matches = set()
+            abortFlag = False
+            # print("INPUT: " + str(transformed_ocr_texts))
             for transform_to_apply in transforms_to_apply:
+                if abortFlag:
+                    break
                 transforms_applied.append(transform_to_apply["name"])
-                for transformed_ocr_text_prev in transformed_ocr_texts:
-                    transformed_ocr_texts = []
-                    for transformed_ocr_text in transform_to_apply["transform"](
-                        transformed_ocr_text_prev
-                    ):
-                        # perform match for original and uppercased ocr_texts (see elif)
-
-                        try:
-                            if transformed_ocr_text in ids_by_symbol:
-                                store_match(
+                new_texts = transform_to_apply["transform"](transformed_ocr_texts)
+                for element in new_texts:
+                    if element not in transformed_ocr_texts:
+                        transformed_ocr_texts.append(element)
+                # print("EXTENDED: " + str(transformed_ocr_texts))
+                for transformed_ocr_text in transformed_ocr_texts:
+                    # print(str(transforms_applied) + ': ' + str(transformed_ocr_text))
+                    if transformed_ocr_text.upper() in stop_list:
+                        # print(str(transformed_ocr_text) + " in stop list")
+                        abortFlag = True
+                        break
+                    try:
+                        if transformed_ocr_text in ids_by_symbol:
+                            store_match(
                                     matches_data,
                                     matches,
                                     transforms_applied,
@@ -204,12 +236,13 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, all_raw_ocr_tex
                                     ids_by_symbol[transformed_ocr_text],
                                     sources_by_symbol[transformed_ocr_text],
                                     transformed_ocr_text,
-                                )
-                            elif (
-                                transformed_ocr_text.upper()
-                                in ids_by_symbol
-                            ):
-                                store_match(
+                            )
+                        # uppercase transformed_ocr_text
+                        elif (
+                            transformed_ocr_text.upper()
+                            in ids_by_symbol
+                        ):
+                            store_match(
                                     matches_data,
                                     matches,
                                     transforms_applied,
@@ -222,29 +255,53 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, all_raw_ocr_tex
                                         transformed_ocr_text.upper()
                                     ],
                                     transformed_ocr_text.upper(),
-                                )
-                            else:
-                                transformed_ocr_texts.append(
-                                    transformed_ocr_text
-                                )
+                            )
+                        # check transformed_lexicon symbols
+                        elif (
+                                transformed_ocr_text.upper()
+                                in ids_by_transformed_symbol
+                        ):
+                            store_match(
+                                    matches_data,
+                                    matches,
+                                    transforms_applied,
+                                    figid,
+                                    ocr_text,
+                                    ids_by_transformed_symbol[
+                                        transformed_ocr_text.upper()
+                                    ],
+                                    sources_by_transformed_symbol[
+                                        transformed_ocr_text.upper()
+                                    ],
+                                    transformed_ocr_text.upper(),
+                            )
+                        # else:
+                        #     transformed_ocr_texts.append(
+                        #             transformed_ocr_text
+                        #     )
 
-                        #    except TimedOutExc as e:
-                        #        print "took too long"
+                    #    except TimedOutExc as e:
+                    #        print "took too long"
 
-                        except (Exception) as e:
-                            print("Unexpected Error:", e)
-                            print("figid:", figid)
-                            print("ocr_text:", ocr_text)
-                            print(
+                    except (Exception) as e:
+                        print("Unexpected Error:", e)
+                        print("figid:", figid)
+                        print("ocr_text:", ocr_text)
+                        print(
                                 "transformed_ocr_text:",
                                 transformed_ocr_text,
-                            )
-                            print(
+                        )
+                        print(
                                 "transforms_applied:",
                                 transforms_applied,
-                            )
-                            raise
+                        )
+                        raise
 
+                if len(matches) > 0:
+                    successes.append(ocr_text + " => " + " & ".join(matches))
+                    # for match in matches:
+                        # print('MATCH: ' + match)
+                    break
             if len(matches) == 0:
                 store_match(
                     matches_data,
@@ -256,10 +313,8 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, all_raw_ocr_tex
                     None,
                     None,
                 )
-        if len(matches) > 0:
-            successes.append(line + " => " + " & ".join(matches))
-        else:
-            fails.append(line)
+                fails.append(ocr_text)
+                # print('FAIL: ' + ocr_text)
 
     with open(successes_path, "a") as f:
         f.write(figid + "\n")
@@ -297,7 +352,7 @@ for x in gcv_ocr_data:
     figid = x["figid"]
 
     try:
-        match(gene_matches_data, figid, ncbigene_ids_by_symbol, lexicon_sources_by_symbol, ocr_text)
+        match(gene_matches_data, figid, ncbigene_ids_by_symbol, lexicon_sources_by_symbol, ncbigene_ids_by_transformed_symbol, lexicon_sources_by_transformed_symbol, ocr_text)
     except (Exception) as e:
         print("Unexpected Error:", e)
         print("figid:", figid)

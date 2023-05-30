@@ -183,7 +183,8 @@ stop_list = ["CO2","HR","GA","CA2","TYPE",
 	"CAMP","FOR","DAG","PIP","FATE","ANG",
 	"NOT","CAN","MIR","CEL","CELL","ECM","HITS","AID","HDS",
 	"REG","ROS","D1","CALL","BEND3","NFE","END","I1","MUT",
-    "MICE","IMPACT","FAT","ODD","SEX","STEP","TUBE"]
+    "MICE","IMPACT","FAT","ODD","SEX","STEP","TUBE",
+    "HISTONE","PROTEASOME"]
 
 
 # Define function to execute matching attempts on all OCR results

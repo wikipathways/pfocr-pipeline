@@ -33,6 +33,8 @@ swap_list = {
 'M-CADHERIN':'CDH15',
 'KSP-CADHERIN':'CDH16',
 'LI-CADHERIN':'CDH17',
+'BCATENIN':'CTNNB1',
+'CALCINEURIN':'PPP3',
 'P13K':'PI3K',
 'NUCLEOLIN':'NCL',
 'VITRONECTIN':'VTN',
@@ -41,7 +43,22 @@ swap_list = {
 'EB13':'EBI3',
 'TRADE':'TRADD',
 'NRF-1':'NFE2L1',
-'NRF-2':'NFE2L2'
+'NRF-2':'NFE2L2',
+'MGLUR':'GRM',
+'AC':'ADCY',
+'GRG':'TLE',
+'NFKB':'NFKAPPAB',
+'MAPKK':'MAP2K',
+'Frizzled':'FZD',
+'NMDAR':'GRIN',
+'IKK':'IKK_complex',
+'Cyclin-A1':'CCNA1',
+'Cyclin-A2':'CCNA2',
+'Cyclin-D1':'CCND1',
+'Cyclin-D2':'CCND2',
+'Cyclin-D3':'CCND3',
+'Cyclin-E1':'CCNE1',
+'Cyclin-E2':'CCNE2'
 }
 
 # This function goes through the swap_list and replaces the keys 

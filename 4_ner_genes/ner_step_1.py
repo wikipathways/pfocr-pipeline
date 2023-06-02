@@ -52,27 +52,27 @@ def pandas2rds(pandas_df, rds_path):
 # Note: The lexicon file may contain redudant entries for the same gene symbol.
 #       This is because the lexicon is built from multiple sources, including
 #       aliases and bioentities. This is okay. All possible matches are returned.
-with open(ner_genes_dir.joinpath("lexicon2020.json"), "r") as f:
-    lexicon2020_df = pd.read_json(f)
+with open(ner_genes_dir.joinpath("lexicon2023.json"), "r") as f:
+    lexicon2023_df = pd.read_json(f, dtype={'ncbigene_id': str})
 
 ncbigene_ids_by_symbol = (
-    lexicon2020_df.groupby('symbol')['ncbigene_id']
+    lexicon2023_df.groupby('symbol')['ncbigene_id']
     .apply(list).to_dict()
 )
 
 lexicon_sources_by_symbol = (
-    lexicon2020_df.groupby('symbol')['source']
+    lexicon2023_df.groupby('symbol')['source']
     .apply(list).to_dict()
 )
 # mild transformations of lexicon symbols
 ncbigene_ids_by_transformed_symbol = (
-    lexicon2020_df.assign(symbol=lexicon2020_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
+    lexicon2023_df.assign(symbol=lexicon2023_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
     .groupby('symbol')['ncbigene_id']
     .apply(list).to_dict()
 )
 
 lexicon_sources_by_transformed_symbol = (
-    lexicon2020_df.assign(symbol=lexicon2020_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
+    lexicon2023_df.assign(symbol=lexicon2023_df['symbol'].str.upper().str.replace('-', '').str.replace('_',''))
     .groupby('symbol')['source']
     .apply(list).to_dict()
 )
@@ -153,12 +153,12 @@ transforms_to_apply = [
         "transform": transforms.root.root,
     },
     {
-        "name": "swaps",
-        "transform": transforms.swaps.swaps,
-    },
-    {
         "name": "alphanumeric",
         "transform": transforms.alphanumeric.alphanumeric,
+    },
+    {
+        "name": "swaps",
+        "transform": transforms.swaps.swaps,
     },
 ]
 
@@ -184,7 +184,7 @@ stop_list = ["CO2","HR","GA","CA2","TYPE",
 	"NOT","CAN","MIR","CEL","CELL","ECM","HITS","AID","HDS",
 	"REG","ROS","D1","CALL","BEND3","NFE","END","I1","MUT",
     "MICE","IMPACT","FAT","ODD","SEX","STEP","TUBE",
-    "HISTONE","PROTEASOME"]
+    "HISTONE","PROTEASOME","TOP"]
 
 
 # Define function to execute matching attempts on all OCR results
@@ -210,7 +210,7 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, ids_by_transfor
             transformed_ocr_texts = [ocr_text]
             matches = set()
             abortFlag = False
-            # print("INPUT: " + str(transformed_ocr_texts))
+            print("INPUT: " + str(transformed_ocr_texts))
             for transform_to_apply in transforms_to_apply:
                 if abortFlag:
                     break
@@ -219,11 +219,11 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, ids_by_transfor
                 for element in new_texts:
                     if element not in transformed_ocr_texts:
                         transformed_ocr_texts.append(element)
-                # print("EXTENDED: " + str(transformed_ocr_texts))
+                print("EXTENDED: " + str(transformed_ocr_texts))
                 for transformed_ocr_text in transformed_ocr_texts:
-                    # print(str(transforms_applied) + ': ' + str(transformed_ocr_text))
+                    print(str(transforms_applied) + ': ' + str(transformed_ocr_text))
                     if transformed_ocr_text.upper() in stop_list:
-                        # print(str(transformed_ocr_text) + " in stop list")
+                        print(str(transformed_ocr_text) + " in stop list")
                         abortFlag = True
                         break
                     try:
@@ -300,8 +300,8 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, ids_by_transfor
 
                 if len(matches) > 0:
                     successes.append(ocr_text + " => " + " & ".join(matches))
-                    # for match in matches:
-                        # print('MATCH: ' + match)
+                    for match in matches:
+                        print('MATCH: ' + match)
                     break
             if len(matches) == 0:
                 store_match(
@@ -315,7 +315,7 @@ def match(matches_data, figid, ids_by_symbol, sources_by_symbol, ids_by_transfor
                     None,
                 )
                 fails.append(ocr_text)
-                # print('FAIL: ' + ocr_text)
+                print('FAIL: ' + ocr_text)
 
     with open(successes_path, "a") as f:
         f.write(figid + "\n")

@@ -15,7 +15,8 @@ symbols <- raw %>%
   dplyr::rename(tax_id=`#tax_id`) %>%
   dplyr::filter(tax_id=='9606') %>%
   dplyr::filter(!grepl("^LOC\\d{9}$", Symbol)) %>%
-  dplyr::filter(!grepl("'", Symbol))%>%
+  dplyr::filter(!grepl("'", Symbol)) %>%
+  filter(nchar(Synonyms) > 2) %>%
   as.data.frame()
 
 ## QC SYMBOLS - visually inspect these results
@@ -36,7 +37,8 @@ print(unique(unlist(strsplit(symbols$Symbol, ""))))
 synonyms <- symbols %>%
   tidyr::separate_rows(Synonyms, sep = "\\|") %>%
   dplyr::filter(!grepl("^LOC\\d{9}$", Synonyms)) %>%
-  dplyr::filter(!grepl("'|,|;| ", Synonyms))%>%
+  dplyr::filter(!grepl("'|,|;| ", Synonyms)) %>%
+  filter(nchar(Synonyms) > 2) %>%
   tidyr::drop_na() %>%
   as.data.frame()
 
@@ -122,21 +124,24 @@ lex.symbols <- symbols %>%
   dplyr::rename(ncbigene_id = GeneID) %>%
   dplyr::mutate(hgnc_symbol = Symbol) %>%
   dplyr::rename(symbol = Symbol) %>%
-  dplyr::mutate(source = "hgnc_symbol")
+  dplyr::mutate(source = "hgnc_symbol") %>%
+  mutate(ncbigene_id = as.character(ncbigene_id))
 
 lex.synonyms <- synonyms %>%
   dplyr::select("GeneID","Symbol","Synonyms") %>%
   dplyr::rename(ncbigene_id = GeneID) %>%
   dplyr::rename(hgnc_symbol = Symbol) %>%
   dplyr::rename(symbol = Synonyms) %>%
-  dplyr::mutate(source = "hgnc_alias_symbol")
+  dplyr::mutate(source = "hgnc_alias_symbol") %>%
+  mutate(ncbigene_id = as.character(ncbigene_id))
 
 lex.famplex <- famplex.id %>%
   dplyr::select("GeneID","symB","symA") %>%
   dplyr::rename(ncbigene_id = GeneID) %>%
   dplyr::rename(hgnc_symbol = symA) %>%
   dplyr::rename(symbol = symB) %>%
-  dplyr::mutate(source = "bioentities_symbol")
+  dplyr::mutate(source = "bioentities_symbol") %>%
+  mutate(ncbigene_id = as.character(ncbigene_id))
   
 lexicon <- rbind(lex.symbols,lex.synonyms,lex.famplex)
 
